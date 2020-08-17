@@ -1,0 +1,8 @@
+
+NatsPublisher/obj/
+
+NatsSubscriber/obj/
+
+NatsTask.Common/obj/
+
+NatsTask.Common/bin/Debug/netstandard2.0/
