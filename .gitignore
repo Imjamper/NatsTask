@@ -6,3 +6,13 @@ NatsSubscriber/obj/
 NatsTask.Common/obj/
 
 NatsTask.Common/bin/Debug/netstandard2.0/
+
+.vs/NatsTask/v16/
+
+NatsTask.sln.DotSettings
+
+NatsSubscriber/bin/Debug/netcoreapp3.1/
+
+NatsPublisher/bin/Debug/netcoreapp3.1/
+
+.vs/NatsTask/DesignTimeBuild/
