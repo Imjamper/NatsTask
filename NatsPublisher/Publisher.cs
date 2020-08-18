@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Text;
 using System.Threading;
 using NATS.Client;
@@ -8,64 +7,53 @@ using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
 using NatsTask.Common.Helpers;
 using Newtonsoft.Json;
-using STAN.Client;
 
 namespace NatsPublisher
 {
-    public class Publisher
+    public class Publisher: NatsClient
     {
         private readonly MessageGenerator _generator;
-        private readonly StanConnectionFactory _connectionFactory;
-        private IStanConnection _connection = null!;
-        private Timer _timer = null!;
+
+        public override string ClientId => "NatsPublisher";
 
         public Publisher()
         {
             _generator = new MessageGenerator();
-            _connectionFactory = new StanConnectionFactory();
         }
 
-        public void Run(string[] args)
+        protected override void InternalRun()
         {
-            CommonDefaults.ConnectionString = Path.Combine($"{AppDomain.CurrentDomain.BaseDirectory}", "PublisherDatabase");
-            Console.WriteLine("The NatsPublisher is running. For turn off, press any key...");
-            RestoreState();
-            InternalRun();
-        }
-
-        private void CreateConnection()
-        {
-            var options = StanOptions.GetDefaultOptions();
-            options.NatsURL = "nats://192.168.99.100:4222";
-
-            _connection = _connectionFactory.CreateConnection(CommonDefaults.ClusterName, "NatsPublisher", options);
-        }
-
-        private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
-        {
-            
-        }
-
-        private void RestoreState()
-        {
-            using var unitOfWork = new UnitOfWork();
-            var messages = unitOfWork.Repository<MessageEntity>().FindAll();
-            foreach (var message in messages)
+            while (IsRunning)
             {
-                Console.WriteLine(message);
+                try
+                {
+                    Console.Clear();
+                    Console.WriteLine("Connecting...");
+                    CreateConnection();
+                }
+                catch (NATSException)
+                {
+                    Reconnect();
+                    continue;
+                }
+                
+                Console.Clear();
+                Console.WriteLine("Connected");
+
+                RestoreState();
+
+                CancellationTokenSource = new CancellationTokenSource();
+
+                PeriodicTask.StartPeriodicTask(SendMessage, 1000, 0, CancellationTokenSource.Token);
+                AutoResetEvent.WaitOne();
+                CancellationTokenSource.Cancel();
+                Connection?.Close();
             }
         }
 
-        private void InternalRun()
+        private void SendMessage()
         {
-            CreateConnection();
-            _timer = new Timer(TimerFired, null, 0, 1000);
-            Console.ReadKey();
-        }
-
-        private void TimerFired(object? state)
-        {
-            if (_connection.NATSConnection.State != ConnState.CONNECTED) 
+            if (Connection?.NATSConnection?.State != ConnState.CONNECTED) 
                 return;
 
             using var unitOfWork = new UnitOfWork();
@@ -74,7 +62,7 @@ namespace NatsPublisher
 
             var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
 
-            _connection.Publish(CommonDefaults.Subject, bytes);
+            Connection.Publish(CommonDefaults.Subject, bytes);
 
             Console.WriteLine(message);
         }

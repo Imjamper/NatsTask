@@ -35,18 +35,6 @@ namespace NatsTask.Common.Database
             if (!File.Exists(ConnectionString)) using (new LiteEngine(ConnectionString)) { }
         }
 
-        public static void RefreshDb()
-        {
-            if (CommonDefaults.InMemoryDatabase)
-            {
-                lock (_readWrite)
-                {
-                    _readWrite.Dispose();
-                    _readWrite = new LiteDb(new MemoryStream());
-                }
-            }
-        }
-
-        public static LiteDb ReadWrite => _readWrite ?? (_readWrite = CommonDefaults.InMemoryDatabase ? new LiteDb(new MemoryStream()) : new LiteDb(ConnectionString));
+        public static LiteDb ReadWrite => _readWrite ??= new LiteDb(ConnectionString);
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
-using System.IO;
 using System.Text;
-using System.Threading;
+using NATS.Client;
 using NatsTask.Common;
 using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
@@ -10,67 +9,47 @@ using STAN.Client;
 
 namespace NatsSubscriber
 {
-    public class Subscriber
+    public class Subscriber: NatsClient
     {
-        private readonly StanConnectionFactory _connectionFactory;
-        private IStanConnection _connection = null!;
+        private IStanSubscription _subscription;
 
-        public Subscriber()
+        public override string ClientId => "NatsSubscriber";
+
+        protected override void InternalRun()
         {
-            _connectionFactory = new StanConnectionFactory();
-        }
-
-        public void Run(string[] args)
-        {
-            CommonDefaults.ConnectionString = Path.Combine($"{AppDomain.CurrentDomain.BaseDirectory}", "SubscriberDatabase");
-
-            Console.WriteLine("The NatsSubscriber is running. For turn off, press any key...");
-            var lastItemId = RestoreState();
-
-            InternalRun(lastItemId);
-        }
-
-        private void CreateConnection()
-        {
-            var options = StanOptions.GetDefaultOptions();
-            options.NatsURL = "nats://192.168.99.100:4222";
-
-            _connection = _connectionFactory.CreateConnection(CommonDefaults.ClusterName, "NatsSubscriber", options);
-        }
-
-        private long? RestoreState()
-        {
-            long? lastItemId = null;
-            using var unitOfWork = new UnitOfWork();
-            var messages = unitOfWork.Repository<MessageEntity>().FindAll();
-            foreach (var message in messages)
+            while (IsRunning)
             {
-                lastItemId = message.Id;
-                Console.WriteLine(message);
-            }
+                try
+                {
+                    Console.Clear();
+                    Console.WriteLine("Connecting...");
+                    CreateConnection();
+                }
+                catch (NATSException)
+                {
+                    Reconnect();
+                    continue;
+                }
 
-            return lastItemId;
-        }
+                Console.Clear();
+                Console.WriteLine("Connected");
 
-        private void InternalRun(long? lastItemId)
-        {
-            CreateConnection();
+                var lastItemId = RestoreState();
 
-            AutoResetEvent ev = new AutoResetEvent(false);
-            StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
-            if (lastItemId.HasValue)
-            {
-                subscriptionOptions.StartAt((ulong) lastItemId.Value + 1);
-            }
-            else
-            {
-                subscriptionOptions.DeliverAllAvailable();
-            }
+                StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
+                if (lastItemId.HasValue)
+                {
+                    subscriptionOptions.StartAt((ulong)lastItemId.Value + 1);
+                }
+                else
+                {
+                    subscriptionOptions.DeliverAllAvailable();
+                }
 
-            using var subscription =
-                _connection.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageEventHandler);
-            {
-                ev.WaitOne();
+                _subscription = Connection?.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageEventHandler);
+                AutoResetEvent.WaitOne();
+                Connection?.Close();
+                _subscription?.Unsubscribe();
             }
         }
 

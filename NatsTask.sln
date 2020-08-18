@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29920.165
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NatsPublisher", "NatsPublisher\NatsPublisher.csproj", "{A68450F1-7E99-4C8F-BFC2-220411684A80}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NatsPublisher", "NatsPublisher\NatsPublisher.csproj", "{A68450F1-7E99-4C8F-BFC2-220411684A80}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NatsSubscriber", "NatsSubscriber\NatsSubscriber.csproj", "{BCB4A870-B496-407B-AC7F-27B0BA0A9306}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NatsSubscriber", "NatsSubscriber\NatsSubscriber.csproj", "{BCB4A870-B496-407B-AC7F-27B0BA0A9306}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NatsTask.Common", "NatsTask.Common\NatsTask.Common.csproj", "{CFC8A771-F605-4FF6-B673-120A551077FE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NatsTask.Common", "NatsTask.Common\NatsTask.Common.csproj", "{CFC8A771-F605-4FF6-B673-120A551077FE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
