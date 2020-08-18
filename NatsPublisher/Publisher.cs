@@ -10,16 +10,16 @@ using Newtonsoft.Json;
 
 namespace NatsPublisher
 {
-    public class Publisher: NatsClient
+    public class Publisher : NatsClient
     {
         private readonly MessageGenerator _generator;
-
-        public override string ClientId => "NatsPublisher";
 
         public Publisher()
         {
             _generator = new MessageGenerator();
         }
+
+        public override string ClientId => "NatsPublisher";
 
         protected override void InternalRun()
         {
@@ -36,7 +36,7 @@ namespace NatsPublisher
                     Reconnect();
                     continue;
                 }
-                
+
                 Console.Clear();
                 Console.WriteLine("Connected");
 
@@ -64,7 +64,7 @@ namespace NatsPublisher
 
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
 
-                Connection?.Publish(CommonDefaults.Subject, bytes);
+                Connection?.Publish(Options.Subject, bytes);
 
                 Console.WriteLine(message);
             }

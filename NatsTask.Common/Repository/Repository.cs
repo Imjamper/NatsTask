@@ -11,24 +11,22 @@ namespace NatsTask.Common.Repository
     public class Repository<TEntity> : IRepository<TEntity> where TEntity : class, IEntity
     {
         protected readonly ILiteUnitOfWork UnitOfWork;
+
         public Repository(ILiteUnitOfWork unitOfWork)
         {
             UnitOfWork = unitOfWork;
         }
 
-        public void Add(IList<TEntity> items) 
+        public void Add(IList<TEntity> items)
         {
-            foreach (var entity in items)
-            {
-                Collection.Insert(entity);
-            }
+            foreach (var entity in items) Collection.Insert(entity);
         }
 
         public long Add(TEntity item)
         {
-           var bsonValue = Collection.Insert(item);
+            var bsonValue = Collection.Insert(item);
 
-           return bsonValue.AsInt64;
+            return bsonValue.AsInt64;
         }
 
         public void Delete(TEntity item)
@@ -62,6 +60,7 @@ namespace NatsTask.Common.Repository
         }
 
         public ILiteCollection<TEntity> Collection => UnitOfWork.Collection<TEntity>();
+
         public TEntity FindOne(Expression<Func<TEntity, bool>> expression)
         {
             return Collection.FindOne(expression);

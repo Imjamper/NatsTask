@@ -57,9 +57,7 @@ namespace NatsTask.Common.Database
         public IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity
         {
             if (_repositories.ContainsKey(typeof(TEntity)))
-            {
                 return _repositories[typeof(TEntity)] as Repository<TEntity>;
-            }
 
             var repository = Activator.CreateInstance(typeof(Repository<TEntity>), this) as IRepository<TEntity>;
             _repositories.Add(typeof(TEntity), repository);

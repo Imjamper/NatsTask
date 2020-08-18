@@ -1,10 +1,14 @@
-﻿namespace NatsSubscriber
+﻿using CommandLine;
+using NatsTask.Common;
+
+namespace NatsSubscriber
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            new Subscriber().Run();
+            Parser.Default.ParseArguments<NatsClientOptions>(args)
+                .WithParsed(o => { new Subscriber().Run(o); });
         }
     }
 }

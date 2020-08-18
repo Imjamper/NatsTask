@@ -11,15 +11,13 @@ namespace NatsTask.Common
 {
     public abstract class NatsClient
     {
-        protected IStanConnection? Connection;
-        protected CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
-        protected bool IsRunning;
-        protected readonly AutoResetEvent AutoResetEvent = new AutoResetEvent(false);
-
         private readonly ConnectionFactory _connectionFactory;
         private readonly StanConnectionFactory _stanConnectionFactory;
-
-        public abstract string ClientId { get; }
+        protected readonly AutoResetEvent AutoResetEvent = new AutoResetEvent(false);
+        protected CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
+        protected IStanConnection? Connection;
+        protected bool IsRunning;
+        protected NatsClientOptions Options = new NatsClientOptions();
 
         protected NatsClient()
         {
@@ -27,19 +25,20 @@ namespace NatsTask.Common
             _connectionFactory = new ConnectionFactory();
         }
 
-        public void Run()
+        public abstract string ClientId { get; }
+
+        public void Run(NatsClientOptions options)
         {
             IsRunning = true;
-            Console.CancelKeyPress += CancelKeyPress;
-            if (Connection != null && Connection.NATSConnection.State == ConnState.CONNECTED)
-                return;
+            Options = options;
 
-            CommonDefaults.ConnectionString = Path.Combine($"{AppDomain.CurrentDomain.BaseDirectory}", ClientId);
+            NatsClientOptions.DatabasePath = Path.Combine($"{AppDomain.CurrentDomain.BaseDirectory}", ClientId);
+
+            Console.CancelKeyPress += CancelKeyPress;
             Console.WriteLine($"The {ClientId} is running.");
 
             InternalRun();
         }
-
 
         protected abstract void InternalRun();
 
@@ -73,12 +72,9 @@ namespace NatsTask.Common
             stanOptions.ConnectTimeout = 4000;
             stanOptions.NatsConn = natsConnection;
             stanOptions.PubAckWait = 40000;
-            stanOptions.ConnectionLostEventHandler += (sender, args) =>
-            {
-                AutoResetEvent.Set();
-            };
+            stanOptions.ConnectionLostEventHandler += (sender, args) => { AutoResetEvent.Set(); };
 
-            var connection = _stanConnectionFactory.CreateConnection(CommonDefaults.ClusterName, ClientId, stanOptions);
+            var connection = _stanConnectionFactory.CreateConnection(Options.ClusterName, ClientId, stanOptions);
 
             Connection = connection;
         }
@@ -97,28 +93,16 @@ namespace NatsTask.Common
             opts.AllowReconnect = true;
             opts.PingInterval = 500;
             opts.MaxPingsOut = 2;
-            opts.ReconnectBufferSize = Options.ReconnectBufferDisabled;
-            opts.MaxReconnect = Options.ReconnectForever;
+            opts.ReconnectBufferSize = NATS.Client.Options.ReconnectBufferDisabled;
+            opts.MaxReconnect = NATS.Client.Options.ReconnectForever;
             opts.ReconnectWait = 1000;
             opts.Timeout = 4000;
 
-            opts.ReconnectedEventHandler += (sender, args) =>
-            {
-                AutoResetEvent.Set();
-            };
-            opts.ClosedEventHandler += (sender, args) =>
-            {
-                AutoResetEvent.Set();
-            };
-            opts.DisconnectedEventHandler += (sender, args) =>
-            {
-                AutoResetEvent.Set();
-            };
-                
-            opts.AsyncErrorEventHandler += (sender, args) =>
-            {
-                AutoResetEvent.Set();
-            };
+            opts.ReconnectedEventHandler += (sender, args) => { AutoResetEvent.Set(); };
+            opts.ClosedEventHandler += (sender, args) => { AutoResetEvent.Set(); };
+            opts.DisconnectedEventHandler += (sender, args) => { AutoResetEvent.Set(); };
+
+            opts.AsyncErrorEventHandler += (sender, args) => { AutoResetEvent.Set(); };
 
             return opts;
         }

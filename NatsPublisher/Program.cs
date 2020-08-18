@@ -1,12 +1,14 @@
-﻿using System;
+﻿using CommandLine;
+using NatsTask.Common;
 
 namespace NatsPublisher
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            new Publisher().Run();
+            Parser.Default.ParseArguments<NatsClientOptions>(args)
+                .WithParsed(o => { new Publisher().Run(o); });
         }
     }
 }

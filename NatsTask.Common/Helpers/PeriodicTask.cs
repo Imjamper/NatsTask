@@ -6,42 +6,31 @@ namespace NatsTask.Common.Helpers
 {
     public class PeriodicTask
     {
-        public static Task StartPeriodicTask(Action action, int intervalInMilliseconds, int delayInMilliseconds, CancellationToken cancelToken)
+        public static Task StartPeriodicTask(Action action, int intervalInMilliseconds, int delayInMilliseconds,
+            CancellationToken cancelToken)
         {
             void WrapperAction()
             {
-                if (cancelToken.IsCancellationRequested)
-                {
-                    return;
-                }
+                if (cancelToken.IsCancellationRequested) return;
 
                 action();
             }
 
             void MainAction()
             {
-                TaskCreationOptions attachedToParent = TaskCreationOptions.AttachedToParent;
+                var attachedToParent = TaskCreationOptions.AttachedToParent;
 
-                if (cancelToken.IsCancellationRequested)
-                {
-                    return;
-                }
+                if (cancelToken.IsCancellationRequested) return;
 
                 if (delayInMilliseconds > 0) Thread.Sleep(delayInMilliseconds);
 
                 while (true)
                 {
-                    if (cancelToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
+                    if (cancelToken.IsCancellationRequested) break;
 
                     Task.Factory.StartNew(WrapperAction, cancelToken, attachedToParent, TaskScheduler.Current);
 
-                    if (cancelToken.IsCancellationRequested || intervalInMilliseconds == Timeout.Infinite)
-                    {
-                        break;
-                    }
+                    if (cancelToken.IsCancellationRequested || intervalInMilliseconds == Timeout.Infinite) break;
 
                     Thread.Sleep(intervalInMilliseconds);
                 }

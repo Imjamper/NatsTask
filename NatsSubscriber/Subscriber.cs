@@ -9,14 +9,13 @@ using STAN.Client;
 
 namespace NatsSubscriber
 {
-    public class Subscriber: NatsClient
+    public class Subscriber : NatsClient
     {
         public override string ClientId => "NatsSubscriber";
 
         protected override void InternalRun()
         {
             while (IsRunning)
-            {
                 try
                 {
                     Console.Clear();
@@ -28,17 +27,13 @@ namespace NatsSubscriber
 
                     var lastItemId = RestoreState();
 
-                    StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
+                    var subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
                     if (lastItemId.HasValue)
-                    {
                         subscriptionOptions.StartAt((ulong) lastItemId.Value + 1);
-                    }
                     else
-                    {
                         subscriptionOptions.DeliverAllAvailable();
-                    }
 
-                    var subscription = Connection?.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageReceived);
+                    var subscription = Connection?.Subscribe(Options.Subject, subscriptionOptions, MessageReceived);
                     AutoResetEvent.WaitOne();
                     Connection?.Close();
                     subscription?.Dispose();
@@ -56,7 +51,6 @@ namespace NatsSubscriber
                     Console.WriteLine($"UnhandledException: {ex.Message}");
                     Console.WriteLine(ex);
                 }
-            }
         }
 
         private void MessageReceived(object sender, StanMsgHandlerArgs e)

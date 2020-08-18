@@ -8,6 +8,7 @@ namespace NatsTask.Common.Repository
 {
     public interface IRepository<TEntity> where TEntity : IEntity
     {
+        ILiteCollection<TEntity> Collection { get; }
         void Add(IList<TEntity> items);
         long Add(TEntity item);
         void DeleteAll();
@@ -17,6 +18,5 @@ namespace NatsTask.Common.Repository
         TEntity FindOne(Expression<Func<TEntity, bool>> expression);
         IList<TEntity> FindAll();
         TEntity LoadOrNull(int id);
-        ILiteCollection<TEntity> Collection { get; }
     }
 }
