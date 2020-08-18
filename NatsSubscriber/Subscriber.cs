@@ -1,29 +1,29 @@
 ﻿using System;
+using System.Text;
 using System.Threading;
 using NATS.Client;
+using NatsTask.Common;
 using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
-using NatsTask.Common.Extensions;
 using NatsTask.Common.Helpers;
+using Newtonsoft.Json;
 
-namespace NatsPublisher
+namespace NatsSubscriber
 {
-    public class Publisher
+    public class Subscriber
     {
-        private readonly MessageGenerator _generator;
         private readonly ConnectionFactory _connectionFactory;
+        private readonly Object _lock = new Object();
         private IConnection _connection = null!;
-        private Timer _timer = null!;
 
-        public Publisher()
+        public Subscriber()
         {
-            _generator = new MessageGenerator();
             _connectionFactory = new ConnectionFactory();
         }
 
         public void Run(string[] args)
         {
-            Console.WriteLine("The NatsPublisher is running. For turn off, press any key...");
+            Console.WriteLine("The NatsSubscriber is running. For turn off, press any key...");
             RestoreState();
             InternalRun();
         }
@@ -42,7 +42,7 @@ namespace NatsPublisher
 
         private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
         {
-            
+
         }
 
         private void RestoreState()
@@ -58,20 +58,23 @@ namespace NatsPublisher
         private void InternalRun()
         {
             _connection = CreateConnection();
-            _timer = new Timer(TimerFired, null, 0, 1000);
+            using (IAsyncSubscription subscription = _connection.SubscribeAsync(CommonDefaults.Subject, MessageEventHandler))
+            {
+                lock (_lock)
+                {
+                    Monitor.Wait(_lock);
+                }
+            }
         }
 
-        private void TimerFired(object? state)
+        private void MessageEventHandler(object? sender, MsgHandlerEventArgs args)
         {
-            if (_connection.State != ConnState.CONNECTED) 
-                return;
-
             using var unitOfWork = new UnitOfWork();
-            var message = _generator.Generate();
-            unitOfWork.Repository<MessageEntity>().Add(message);
 
-            _connection.Publish(message.ToMsg());
-            _connection.Flush();
+            var jsonString = Encoding.UTF8.GetString(args.Message.Data);
+            var message = JsonConvert.DeserializeObject<MessageEntity>(jsonString);
+            var id = unitOfWork.Repository<MessageEntity>().Add(message);
+            
             Console.WriteLine(message);
         }
     }

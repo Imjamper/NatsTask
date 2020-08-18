@@ -69,7 +69,7 @@ namespace NatsTask.Common.Database
 
         public ILiteCollection<TEntity> Collection<TEntity>() where TEntity : class
         {
-            return _database.GetCollection<TEntity>(nameof(TEntity));
+            return _database.GetCollection<TEntity>(typeof(TEntity).Name);
         }
 
         public void DeleteAll<TEntity>()

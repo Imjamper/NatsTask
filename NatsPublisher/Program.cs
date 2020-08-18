@@ -9,8 +9,6 @@ namespace NatsPublisher
             try
             {
                 new Publisher().Run(args);
-
-                Console.WriteLine("The NatsPublisher is running. For turn off, press any key...");
                 Console.ReadLine();
             }
             catch (Exception ex)

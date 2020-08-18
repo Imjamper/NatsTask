@@ -6,5 +6,10 @@ namespace NatsTask.Common.Entity
     {
         public DateTime TimeStamp { get; set; }
         public string Data { get; set; }
+
+        public override string ToString()
+        {
+            return $"Message: {Id} | {TimeStamp:G} | {Data}";
+        }
     }
 }
