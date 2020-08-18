@@ -53,18 +53,25 @@ namespace NatsPublisher
 
         private void SendMessage()
         {
-            if (Connection?.NATSConnection?.State != ConnState.CONNECTED) 
+            if (Connection == null)
                 return;
 
-            using var unitOfWork = new UnitOfWork();
-            var message = _generator.Generate();
-            unitOfWork.Repository<MessageEntity>().Add(message);
+            try
+            {
+                using var unitOfWork = new UnitOfWork();
+                var message = _generator.Generate();
+                unitOfWork.Repository<MessageEntity>().Add(message);
 
-            var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
+                var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
 
-            Connection.Publish(CommonDefaults.Subject, bytes);
+                Connection?.Publish(CommonDefaults.Subject, bytes);
 
-            Console.WriteLine(message);
+                Console.WriteLine(message);
+            }
+            catch (Exception)
+            {
+                AutoResetEvent.Set();
+            }
         }
     }
 }

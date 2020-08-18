@@ -11,8 +11,6 @@ namespace NatsSubscriber
 {
     public class Subscriber: NatsClient
     {
-        private IStanSubscription _subscription;
-
         public override string ClientId => "NatsSubscriber";
 
         protected override void InternalRun()
@@ -33,16 +31,17 @@ namespace NatsSubscriber
                     StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
                     if (lastItemId.HasValue)
                     {
-                        subscriptionOptions.StartAt((ulong)lastItemId.Value + 1);
+                        subscriptionOptions.StartAt((ulong) lastItemId.Value + 1);
                     }
                     else
                     {
                         subscriptionOptions.DeliverAllAvailable();
                     }
 
-                    _subscription = Connection?.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageEventHandler);
+                    var subscription = Connection?.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageReceived);
                     AutoResetEvent.WaitOne();
                     Connection?.Close();
+                    subscription?.Dispose();
                 }
                 catch (NATSException)
                 {
@@ -52,10 +51,15 @@ namespace NatsSubscriber
                 {
                     Reconnect();
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UnhandledException: {ex.Message}");
+                    Console.WriteLine(ex);
+                }
             }
         }
 
-        private void MessageEventHandler(object sender, StanMsgHandlerArgs e)
+        private void MessageReceived(object sender, StanMsgHandlerArgs e)
         {
             try
             {
@@ -67,9 +71,18 @@ namespace NatsSubscriber
 
                 Console.WriteLine(message);
             }
-            catch (Exception)
+            catch (NATSException)
             {
-                AutoResetEvent.Set();
+                Reconnect();
+            }
+            catch (StanException)
+            {
+                Reconnect();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"UnhandledException: {ex.Message}");
+                Console.WriteLine(ex);
             }
         }
     }
