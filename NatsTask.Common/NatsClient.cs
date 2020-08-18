@@ -95,9 +95,9 @@ namespace NatsTask.Common
             var opts = ConnectionFactory.GetDefaultOptions();
             opts.Url = "nats://192.168.99.100:4222";
             opts.AllowReconnect = true;
-            opts.PingInterval = 5000;
+            opts.PingInterval = 500;
             opts.MaxPingsOut = 2;
-            //opts.ReconnectBufferSize = Options.ReconnectBufferDisabled;
+            opts.ReconnectBufferSize = Options.ReconnectBufferDisabled;
             opts.MaxReconnect = Options.ReconnectForever;
             opts.ReconnectWait = 1000;
             opts.Timeout = 4000;

@@ -24,44 +24,53 @@ namespace NatsSubscriber
                     Console.Clear();
                     Console.WriteLine("Connecting...");
                     CreateConnection();
+
+                    Console.Clear();
+                    Console.WriteLine("Connected");
+
+                    var lastItemId = RestoreState();
+
+                    StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
+                    if (lastItemId.HasValue)
+                    {
+                        subscriptionOptions.StartAt((ulong)lastItemId.Value + 1);
+                    }
+                    else
+                    {
+                        subscriptionOptions.DeliverAllAvailable();
+                    }
+
+                    _subscription = Connection?.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageEventHandler);
+                    AutoResetEvent.WaitOne();
+                    Connection?.Close();
                 }
                 catch (NATSException)
                 {
                     Reconnect();
-                    continue;
                 }
-
-                Console.Clear();
-                Console.WriteLine("Connected");
-
-                var lastItemId = RestoreState();
-
-                StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
-                if (lastItemId.HasValue)
+                catch (StanException)
                 {
-                    subscriptionOptions.StartAt((ulong)lastItemId.Value + 1);
+                    Reconnect();
                 }
-                else
-                {
-                    subscriptionOptions.DeliverAllAvailable();
-                }
-
-                _subscription = Connection?.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageEventHandler);
-                AutoResetEvent.WaitOne();
-                Connection?.Close();
-                _subscription?.Unsubscribe();
             }
         }
 
         private void MessageEventHandler(object sender, StanMsgHandlerArgs e)
         {
-            using var unitOfWork = new UnitOfWork();
+            try
+            {
+                using var unitOfWork = new UnitOfWork();
 
-            var message = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(e.Message.Data));
-            message.TimeStamp = DateTime.Now;
-            unitOfWork.Repository<MessageEntity>().Add(message);
+                var message = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(e.Message.Data));
+                message.TimeStamp = DateTime.Now;
+                unitOfWork.Repository<MessageEntity>().Add(message);
 
-            Console.WriteLine(message);
+                Console.WriteLine(message);
+            }
+            catch (Exception)
+            {
+                AutoResetEvent.Set();
+            }
         }
     }
 }
