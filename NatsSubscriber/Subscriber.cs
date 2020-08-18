@@ -37,7 +37,7 @@ namespace NatsSubscriber
             options.AllowReconnect = true;
             options.Url = "nats://demo.nats.io";
 
-            return new ConnectionFactory().CreateConnection(options);
+            return _connectionFactory.CreateConnection(options);
         }
 
         private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
@@ -73,7 +73,9 @@ namespace NatsSubscriber
 
             var jsonString = Encoding.UTF8.GetString(args.Message.Data);
             var message = JsonConvert.DeserializeObject<MessageEntity>(jsonString);
-            var id = unitOfWork.Repository<MessageEntity>().Add(message);
+            message.TimeStamp = DateTime.Now;
+
+            unitOfWork.Repository<MessageEntity>().Add(message);
             
             Console.WriteLine(message);
         }

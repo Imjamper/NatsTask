@@ -37,7 +37,7 @@ namespace NatsPublisher
             options.AllowReconnect = true;
             options.Url = "nats://demo.nats.io";
 
-            return new ConnectionFactory().CreateConnection(options);
+            return _connectionFactory.CreateConnection(options);
         }
 
         private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
