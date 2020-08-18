@@ -9,7 +9,6 @@ namespace NatsPublisher
             try
             {
                 new Publisher().Run(args);
-                Console.ReadLine();
             }
             catch (Exception ex)
             {

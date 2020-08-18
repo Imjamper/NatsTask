@@ -1,11 +1,10 @@
 ﻿using System;
+using System.IO;
 using System.Text;
-using System.Threading;
 using NATS.Client;
 using NatsTask.Common;
 using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
-using NatsTask.Common.Helpers;
 using Newtonsoft.Json;
 
 namespace NatsSubscriber
@@ -14,7 +13,7 @@ namespace NatsSubscriber
     {
         private readonly ConnectionFactory _connectionFactory;
         private readonly Object _lock = new Object();
-        private IConnection _connection = null!;
+        private IEncodedConnection _connection = null!;
 
         public Subscriber()
         {
@@ -23,12 +22,14 @@ namespace NatsSubscriber
 
         public void Run(string[] args)
         {
+            CommonDefaults.ConnectionString = Path.Combine($"{AppDomain.CurrentDomain.BaseDirectory}", "SubscriberDatabase");
+
             Console.WriteLine("The NatsSubscriber is running. For turn off, press any key...");
             RestoreState();
             InternalRun();
         }
 
-        private IConnection CreateConnection()
+        private void CreateConnection()
         {
             Options options = ConnectionFactory.GetDefaultOptions();
             options.ReconnectedEventHandler = ReconnectedEventHandler;
@@ -37,7 +38,11 @@ namespace NatsSubscriber
             options.AllowReconnect = true;
             options.Url = "nats://demo.nats.io";
 
-            return _connectionFactory.CreateConnection(options);
+            _connection = _connectionFactory.CreateEncodedConnection(options);
+
+            _connection.OnSerialize += o => Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(o));
+            _connection.OnDeserialize +=
+                bytes => JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(bytes));
         }
 
         private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
@@ -57,27 +62,23 @@ namespace NatsSubscriber
 
         private void InternalRun()
         {
-            _connection = CreateConnection();
-            using (IAsyncSubscription subscription = _connection.SubscribeAsync(CommonDefaults.Subject, MessageEventHandler))
-            {
-                lock (_lock)
-                {
-                    Monitor.Wait(_lock);
-                }
-            }
+            CreateConnection();
+            using var subscription = _connection.SubscribeAsync(CommonDefaults.Subject, MessageEventHandler);
+            subscription.Start();
+            Console.ReadKey();
         }
 
-        private void MessageEventHandler(object? sender, MsgHandlerEventArgs args)
+        private void MessageEventHandler(object? sender, EncodedMessageEventArgs e)
         {
             using var unitOfWork = new UnitOfWork();
 
-            var jsonString = Encoding.UTF8.GetString(args.Message.Data);
-            var message = JsonConvert.DeserializeObject<MessageEntity>(jsonString);
-            message.TimeStamp = DateTime.Now;
+            if (e.ReceivedObject is MessageEntity message)
+            {
+                message.TimeStamp = DateTime.Now;
+                unitOfWork.Repository<MessageEntity>().Add(message);
 
-            unitOfWork.Repository<MessageEntity>().Add(message);
-            
-            Console.WriteLine(message);
+                Console.WriteLine(message);
+            }
         }
     }
 }
