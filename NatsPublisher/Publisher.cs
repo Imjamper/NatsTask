@@ -8,20 +8,21 @@ using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
 using NatsTask.Common.Helpers;
 using Newtonsoft.Json;
+using STAN.Client;
 
 namespace NatsPublisher
 {
     public class Publisher
     {
         private readonly MessageGenerator _generator;
-        private readonly ConnectionFactory _connectionFactory;
-        private IEncodedConnection _connection = null!;
+        private readonly StanConnectionFactory _connectionFactory;
+        private IStanConnection _connection = null!;
         private Timer _timer = null!;
 
         public Publisher()
         {
             _generator = new MessageGenerator();
-            _connectionFactory = new ConnectionFactory();
+            _connectionFactory = new StanConnectionFactory();
         }
 
         public void Run(string[] args)
@@ -34,18 +35,10 @@ namespace NatsPublisher
 
         private void CreateConnection()
         {
-            Options options = ConnectionFactory.GetDefaultOptions();
-            options.ReconnectedEventHandler = ReconnectedEventHandler;
-            options.ReconnectWait = 1000;
-            options.MaxReconnect = Options.ReconnectForever;
-            options.AllowReconnect = true;
-            options.Url = "nats://demo.nats.io";
+            var options = StanOptions.GetDefaultOptions();
+            options.NatsURL = "nats://192.168.99.100:4222";
 
-            _connection = _connectionFactory.CreateEncodedConnection(options);
-
-            _connection.OnSerialize += o => Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(o));
-            _connection.OnDeserialize +=
-                bytes => JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(bytes));
+            _connection = _connectionFactory.CreateConnection(CommonDefaults.ClusterName, "NatsPublisher", options);
         }
 
         private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
@@ -72,16 +65,17 @@ namespace NatsPublisher
 
         private void TimerFired(object? state)
         {
-            
-            if (_connection.State != ConnState.CONNECTED) 
+            if (_connection.NATSConnection.State != ConnState.CONNECTED) 
                 return;
 
             using var unitOfWork = new UnitOfWork();
             var message = _generator.Generate();
             unitOfWork.Repository<MessageEntity>().Add(message);
 
-            _connection.Publish(CommonDefaults.Subject, message);
-            _connection.Flush();
+            var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
+
+            _connection.Publish(CommonDefaults.Subject, bytes);
+
             Console.WriteLine(message);
         }
     }

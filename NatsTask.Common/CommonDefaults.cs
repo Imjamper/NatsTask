@@ -9,6 +9,7 @@ namespace NatsTask.Common
         private static string _loggerFolder;
 
         public const string Subject = "NATS_TASK";
+        public const string ClusterName = "test-cluster";
 
         public static bool InMemoryDatabase { get; set; }
 

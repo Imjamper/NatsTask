@@ -1,23 +1,23 @@
 ﻿using System;
 using System.IO;
 using System.Text;
-using NATS.Client;
+using System.Threading;
 using NatsTask.Common;
 using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
 using Newtonsoft.Json;
+using STAN.Client;
 
 namespace NatsSubscriber
 {
     public class Subscriber
     {
-        private readonly ConnectionFactory _connectionFactory;
-        private readonly Object _lock = new Object();
-        private IEncodedConnection _connection = null!;
+        private readonly StanConnectionFactory _connectionFactory;
+        private IStanConnection _connection = null!;
 
         public Subscriber()
         {
-            _connectionFactory = new ConnectionFactory();
+            _connectionFactory = new StanConnectionFactory();
         }
 
         public void Run(string[] args)
@@ -25,60 +25,64 @@ namespace NatsSubscriber
             CommonDefaults.ConnectionString = Path.Combine($"{AppDomain.CurrentDomain.BaseDirectory}", "SubscriberDatabase");
 
             Console.WriteLine("The NatsSubscriber is running. For turn off, press any key...");
-            RestoreState();
-            InternalRun();
+            var lastItemId = RestoreState();
+
+            InternalRun(lastItemId);
         }
 
         private void CreateConnection()
         {
-            Options options = ConnectionFactory.GetDefaultOptions();
-            options.ReconnectedEventHandler = ReconnectedEventHandler;
-            options.ReconnectWait = 1000;
-            options.MaxReconnect = Options.ReconnectForever;
-            options.AllowReconnect = true;
-            options.Url = "nats://demo.nats.io";
+            var options = StanOptions.GetDefaultOptions();
+            options.NatsURL = "nats://192.168.99.100:4222";
 
-            _connection = _connectionFactory.CreateEncodedConnection(options);
-
-            _connection.OnSerialize += o => Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(o));
-            _connection.OnDeserialize +=
-                bytes => JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(bytes));
+            _connection = _connectionFactory.CreateConnection(CommonDefaults.ClusterName, "NatsSubscriber", options);
         }
 
-        private void ReconnectedEventHandler(object? sender, ConnEventArgs e)
+        private long? RestoreState()
         {
-
-        }
-
-        private void RestoreState()
-        {
+            long? lastItemId = null;
             using var unitOfWork = new UnitOfWork();
             var messages = unitOfWork.Repository<MessageEntity>().FindAll();
             foreach (var message in messages)
             {
+                lastItemId = message.Id;
                 Console.WriteLine(message);
+            }
+
+            return lastItemId;
+        }
+
+        private void InternalRun(long? lastItemId)
+        {
+            CreateConnection();
+
+            AutoResetEvent ev = new AutoResetEvent(false);
+            StanSubscriptionOptions subscriptionOptions = StanSubscriptionOptions.GetDefaultOptions();
+            if (lastItemId.HasValue)
+            {
+                subscriptionOptions.StartAt((ulong) lastItemId.Value + 1);
+            }
+            else
+            {
+                subscriptionOptions.DeliverAllAvailable();
+            }
+
+            using var subscription =
+                _connection.Subscribe(CommonDefaults.Subject, subscriptionOptions, MessageEventHandler);
+            {
+                ev.WaitOne();
             }
         }
 
-        private void InternalRun()
-        {
-            CreateConnection();
-            using var subscription = _connection.SubscribeAsync(CommonDefaults.Subject, MessageEventHandler);
-            subscription.Start();
-            Console.ReadKey();
-        }
-
-        private void MessageEventHandler(object? sender, EncodedMessageEventArgs e)
+        private void MessageEventHandler(object sender, StanMsgHandlerArgs e)
         {
             using var unitOfWork = new UnitOfWork();
 
-            if (e.ReceivedObject is MessageEntity message)
-            {
-                message.TimeStamp = DateTime.Now;
-                unitOfWork.Repository<MessageEntity>().Add(message);
+            var message = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(e.Message.Data));
+            message.TimeStamp = DateTime.Now;
+            unitOfWork.Repository<MessageEntity>().Add(message);
 
-                Console.WriteLine(message);
-            }
+            Console.WriteLine(message);
         }
     }
 }
