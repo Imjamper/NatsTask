@@ -47,7 +47,7 @@ namespace NatsPublisher
                 }
 
                 Console.Clear();
-                Console.WriteLine("Connected");
+                Console.WriteLine($"Connected to {Options.Url}");
 
                 RestoreState();
 
@@ -82,13 +82,13 @@ namespace NatsPublisher
 
                 message.CheckSum = GetMd5Hash();
 
-                unitOfWork.Repository<MessageEntity>().Add(message);
+                unitOfWork.Collection<MessageEntity>(Options.Subject).Insert(message);
 
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
 
                 Connection?.Publish(Options.Subject, bytes);
 
-                Console.WriteLine(message);
+                Console.WriteLine($"{Options.Subject} | {message}");
             }
             catch (NATSException)
             {

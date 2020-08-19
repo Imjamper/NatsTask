@@ -16,3 +16,13 @@ NatsSubscriber/bin/Debug/netcoreapp3.1/
 NatsPublisher/bin/Debug/netcoreapp3.1/
 
 .vs/NatsTask/DesignTimeBuild/
+
+NatsPublisher/bin/Release/netcoreapp3.1/
+
+NatsPublisher/Properties/
+
+NatsSubscriber/bin/Release/netcoreapp3.1/
+
+NatsSubscriber/Properties/
+
+NatsTask.Common/bin/Release/netstandard2.0/

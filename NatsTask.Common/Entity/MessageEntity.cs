@@ -11,7 +11,7 @@ namespace NatsTask.Common.Entity
 
         public override string ToString()
         {
-            return $"Message: {Id} | {TimeStamp:G} | {Data} | {CheckSum}";
+            return $"{Id} | {TimeStamp:G} | {Data} | {CheckSum}";
         }
     }
 }

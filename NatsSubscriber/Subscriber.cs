@@ -23,7 +23,7 @@ namespace NatsSubscriber
                     CreateConnection();
 
                     Console.Clear();
-                    Console.WriteLine("Connected");
+                    Console.WriteLine($"Connected to {Options.Url}");
 
                     var lastItemId = RestoreState();
 
@@ -57,28 +57,7 @@ namespace NatsSubscriber
         {
             try
             {
-                using var unitOfWork = new UnitOfWork();
-                var message = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(e.Message.Data));
-                message.TimeStamp = DateTime.Now;
-                if (unitOfWork.Repository<MessageEntity>().Collection
-                    .Exists(entity => entity.Id == message.Id && entity.Data == message.Data))
-                    return;
-
-                if (LastHash == null)
-                {
-                    IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
-                }
-                else
-                {
-                    IncrementalHash.AppendData(LastHash);
-                    IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
-                }
-
-                message.CheckSum = GetMd5Hash();
-
-                unitOfWork.Repository<MessageEntity>().Add(message);
-
-                Console.WriteLine(message);
+                HandleMessage(e);
             }
             catch (NATSException)
             {
@@ -93,6 +72,32 @@ namespace NatsSubscriber
                 Console.WriteLine($"UnhandledException: {ex.Message}");
                 Console.WriteLine(ex);
             }
+        }
+
+        private void HandleMessage(StanMsgHandlerArgs e)
+        {
+            using var unitOfWork = new UnitOfWork();
+            var message = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(e.Message.Data));
+            message.TimeStamp = DateTime.Now;
+            if (unitOfWork.Collection<MessageEntity>(Options.Subject)
+                .Exists(entity => entity.Id == message.Id))
+                return;
+
+            if (LastHash == null)
+            {
+                IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
+            }
+            else
+            {
+                IncrementalHash.AppendData(LastHash);
+                IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
+            }
+
+            message.CheckSum = GetMd5Hash();
+
+            unitOfWork.Collection<MessageEntity>(Options.Subject).Insert(message);
+
+            Console.WriteLine($"{Options.Subject} | {message}");
         }
     }
 }

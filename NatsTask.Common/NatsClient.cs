@@ -59,8 +59,8 @@ namespace NatsTask.Common
         {
             long? lastItemId = null;
             using var unitOfWork = new UnitOfWork();
-            var messages = unitOfWork.Repository<MessageEntity>().FindAll();
-            foreach (var message in messages) Console.WriteLine(message);
+            var messages = unitOfWork.Collection<MessageEntity>(Options.Subject).FindAll().ToList();
+            foreach (var message in messages) Console.WriteLine($"{Options.Subject} | {message}");
 
             var last = messages.LastOrDefault();
             if (last == null)

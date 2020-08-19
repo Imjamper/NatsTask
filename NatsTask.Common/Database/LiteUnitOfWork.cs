@@ -64,9 +64,9 @@ namespace NatsTask.Common.Database
             return repository;
         }
 
-        public ILiteCollection<TEntity> Collection<TEntity>() where TEntity : class
+        public ILiteCollection<TEntity> Collection<TEntity>(string name = null) where TEntity : class
         {
-            return _database.GetCollection<TEntity>(typeof(TEntity).Name);
+            return _database.GetCollection<TEntity>(name ?? typeof(TEntity).Name);
         }
 
         public void DeleteAll<TEntity>()

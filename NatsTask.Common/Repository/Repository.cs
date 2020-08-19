@@ -64,7 +64,7 @@ namespace NatsTask.Common.Repository
             Collection.Update(item);
         }
 
-        public ILiteCollection<TEntity> Collection => UnitOfWork.Collection<TEntity>();
+        public virtual ILiteCollection<TEntity> Collection => UnitOfWork.Collection<TEntity>();
 
         public TEntity FindOne(Expression<Func<TEntity, bool>> expression)
         {

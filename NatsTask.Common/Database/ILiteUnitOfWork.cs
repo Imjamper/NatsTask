@@ -13,7 +13,7 @@ namespace NatsTask.Common.Database
 
         IRepository<TEntity> Repository<TEntity>() where TEntity : class, IEntity;
 
-        ILiteCollection<TEntity> Collection<TEntity>() where TEntity : class;
+        ILiteCollection<TEntity> Collection<TEntity>(string name = null) where TEntity : class;
 
         void DeleteAll<TEntity>();
     }
