@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using CommandLine;
 using NatsTask.Common.Database;
 
@@ -9,6 +8,13 @@ namespace NatsTask.Common
     {
         private static string _databasePath;
 
+        public NatsClientOptions()
+        {
+            Subject = "NATS_TASK";
+            ClusterName = "test-cluster";
+            Url = "nats://192.168.99.100:4222";
+        }
+
         [Option('s', "subject", Required = false, HelpText = "NATS streaming server subject. Default - 'NATS_TASK'")]
         public string Subject { get; set; }
 
@@ -16,11 +22,9 @@ namespace NatsTask.Common
             HelpText = "NATS streaming server cluster name. Default = 'test-cluster'")]
         public string ClusterName { get; set; }
 
-        public NatsClientOptions()
-        {
-            Subject = "NATS_TASK";
-            ClusterName = "test-cluster";
-        }
+        [Option('u', "url", Required = false,
+            HelpText = "NATS streaming server url. Default = 'nats://localhost:4222'")]
+        public string Url { get; set; }
 
         public static string DatabasePath
         {

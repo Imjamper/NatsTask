@@ -29,6 +29,11 @@ namespace NatsTask.Common.Repository
             return bsonValue.AsInt64;
         }
 
+        public void Add(TEntity item, long id)
+        {
+            Collection.Insert(id, item);
+        }
+
         public void Delete(TEntity item)
         {
             Collection.Delete(new BsonValue(item.Id));

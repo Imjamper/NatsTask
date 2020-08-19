@@ -58,20 +58,35 @@ namespace NatsSubscriber
             try
             {
                 using var unitOfWork = new UnitOfWork();
-
                 var message = JsonConvert.DeserializeObject<MessageEntity>(Encoding.UTF8.GetString(e.Message.Data));
                 message.TimeStamp = DateTime.Now;
+                if (unitOfWork.Repository<MessageEntity>().Collection
+                    .Exists(entity => entity.Id == message.Id && entity.Data == message.Data))
+                    return;
+
+                if (LastHash == null)
+                {
+                    IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
+                }
+                else
+                {
+                    IncrementalHash.AppendData(LastHash);
+                    IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
+                }
+
+                message.CheckSum = GetMd5Hash();
+
                 unitOfWork.Repository<MessageEntity>().Add(message);
 
                 Console.WriteLine(message);
             }
             catch (NATSException)
             {
-                Reconnect();
+                AutoResetEvent.Set();
             }
             catch (StanException)
             {
-                Reconnect();
+                AutoResetEvent.Set();
             }
             catch (Exception ex)
             {

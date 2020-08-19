@@ -11,6 +11,7 @@ namespace NatsTask.Common.Repository
         ILiteCollection<TEntity> Collection { get; }
         void Add(IList<TEntity> items);
         long Add(TEntity item);
+        void Add(TEntity item, long id);
         void DeleteAll();
         void Update(TEntity item);
         void Delete(TEntity item);

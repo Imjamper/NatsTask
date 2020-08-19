@@ -7,6 +7,7 @@ using NatsTask.Common.Database;
 using NatsTask.Common.Entity;
 using NatsTask.Common.Helpers;
 using Newtonsoft.Json;
+using STAN.Client;
 
 namespace NatsPublisher
 {
@@ -34,7 +35,15 @@ namespace NatsPublisher
                 catch (NATSException)
                 {
                     Reconnect();
-                    continue;
+                }
+                catch (StanException)
+                {
+                    Reconnect();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"UnhandledException: {ex.Message}");
+                    Console.WriteLine(ex);
                 }
 
                 Console.Clear();
@@ -60,6 +69,19 @@ namespace NatsPublisher
             {
                 using var unitOfWork = new UnitOfWork();
                 var message = _generator.Generate();
+
+                if (LastHash == null)
+                {
+                    IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
+                }
+                else
+                {
+                    IncrementalHash.AppendData(LastHash);
+                    IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
+                }
+
+                message.CheckSum = GetMd5Hash();
+
                 unitOfWork.Repository<MessageEntity>().Add(message);
 
                 var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(message));
@@ -68,9 +90,18 @@ namespace NatsPublisher
 
                 Console.WriteLine(message);
             }
-            catch (Exception)
+            catch (NATSException)
             {
                 AutoResetEvent.Set();
+            }
+            catch (StanException)
+            {
+                AutoResetEvent.Set();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"UnhandledException: {ex.Message}");
+                Console.WriteLine(ex);
             }
         }
     }
