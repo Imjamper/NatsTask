@@ -36,7 +36,7 @@ namespace NatsSubscriber
                     var subscription = Connection?.Subscribe(Options.Subject, subscriptionOptions, MessageReceived);
                     AutoResetEvent.WaitOne();
                     Connection?.Close();
-                    subscription?.Dispose();
+                    subscription?.Unsubscribe();
                 }
                 catch (NATSException)
                 {
@@ -93,7 +93,13 @@ namespace NatsSubscriber
                 IncrementalHash.AppendData(Encoding.UTF8.GetBytes(message.Data));
             }
 
-            message.CheckSum = GetMd5Hash();
+            var checkSum = GetMd5Hash();
+
+            if (checkSum != message.CheckSum)
+            {
+            }
+
+            message.CheckSum = checkSum;
 
             unitOfWork.Collection<MessageEntity>(Options.Subject).Insert(message);
 

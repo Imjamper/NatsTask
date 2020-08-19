@@ -25,12 +25,23 @@ namespace NatsPublisher
         protected override void InternalRun()
         {
             while (IsRunning)
-            {
                 try
                 {
                     Console.Clear();
                     Console.WriteLine("Connecting...");
                     CreateConnection();
+
+                    Console.Clear();
+                    Console.WriteLine($"Connected to {Options.Url}");
+
+                    RestoreState();
+
+                    CancellationTokenSource = new CancellationTokenSource();
+
+                    PeriodicTask.StartPeriodicTask(SendMessage, 1000, 0, CancellationTokenSource.Token);
+                    AutoResetEvent.WaitOne();
+                    CancellationTokenSource.Cancel();
+                    Connection?.Close();
                 }
                 catch (NATSException)
                 {
@@ -45,19 +56,6 @@ namespace NatsPublisher
                     Console.WriteLine($"UnhandledException: {ex.Message}");
                     Console.WriteLine(ex);
                 }
-
-                Console.Clear();
-                Console.WriteLine($"Connected to {Options.Url}");
-
-                RestoreState();
-
-                CancellationTokenSource = new CancellationTokenSource();
-
-                PeriodicTask.StartPeriodicTask(SendMessage, 1000, 0, CancellationTokenSource.Token);
-                AutoResetEvent.WaitOne();
-                CancellationTokenSource.Cancel();
-                Connection?.Close();
-            }
         }
 
         private void SendMessage()
